@@ -1,0 +1,2 @@
+hilbertcurve
+pyperclip
