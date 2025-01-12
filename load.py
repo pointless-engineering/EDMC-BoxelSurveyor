@@ -19,11 +19,15 @@ import threading
 import requests
 import re
 
+import sqlite3
+
 # This **MUST** match the name of the folder the plugin is in.
 PLUGIN_NAME = "EDMCBoxelSurveyor"
-PLUGIN_VERSION = boxel.suffix({"MassCode":0,"BoxelZ":1,"BoxelY":0,"BoxelX":0,"Index":0})
+PLUGIN_VERSION = boxel.suffix({"MassCode":0,"BoxelZ":1,"BoxelY":1,"BoxelX":0,"Index":0})
 
 logger = logging.getLogger(f"{appname}.{PLUGIN_NAME}")
+
+db_path = config.app_dir_path / "boxelsurveyor.db3"
 
 def get_boxel_stats_edsm_thread(star_prefix, callback_success, callback_failure = None, callback_exception = None):
     try:
@@ -56,7 +60,17 @@ class EDMCBoxelSurveyor:
         self.frame = None
         self.last_state = None
 
-    def get_boxel_stats(self, star_name):
+        self.db_conn = sqlite3.connect(db_path)
+        self.db_cur = self.db_conn.cursor()
+
+        self.db_cur.execute("""
+            CREATE TABLE IF NOT EXISTS boxels (Sx, Sy, Sz, MC, Bx, By, Bz, n_known,
+                            PRIMARY KEY (Sx, Sy, Sz, MC, Bx, By, Bz) ON CONFLICT REPLACE)
+                            WITHOUT ROWID;
+            """)
+        self.db_conn.commit()
+
+    def get_boxel_stats(self, star_name, star_id64):
         m1 = re.fullmatch("([A-Za-z0-9 ]+ [A-Z][A-Z]-[A-Z] [a-h])([0-9]+)", star_name)
         if m1:
             g = m1.groups()
@@ -73,21 +87,33 @@ class EDMCBoxelSurveyor:
                 self.frame.event_generate("<<Refresh-Boxel-Stats>>")
                 return None
 
-        # k = (
-        #     parsed_id64['SectorX'], parsed_id64['SectorY'], parsed_id64['SectorZ'],
-        #     parsed_id64['MassCode'],
-        #     parsed_id64['BoxelX'], parsed_id64['BoxelY'], parsed_id64['BoxelZ']
-        # )
+        parsed_id64 = boxel.parse_id64(star_id64)
+        k = (
+            parsed_id64['SectorX'], parsed_id64['SectorY'], parsed_id64['SectorZ'],
+            parsed_id64['MassCode'],
+            parsed_id64['BoxelX'], parsed_id64['BoxelY'], parsed_id64['BoxelZ']
+        )
+        cached_results = set()
+        res = self.db_cur.execute("""
+            SELECT n_known FROM boxels WHERE Sx = ? AND Sy = ? AND Sz = ? AND MC = ?
+                            AND Bx = ? AND By = ? AND Bz = ?
+                            """, k).fetchall()
+        logger.info(res)
+        if len(res):
+            cached_results = set(int(i) for i in res[0][0].split(" "))
+        cached_results.add(parsed_id64['Index'])
+
 
         def with_results(star_prefix, results):
             self.known_boxel_idxs.clear()
+            self.known_boxel_idxs.update(cached_results)
             for r in results:
                 m = re.findall("[-a-h]([0-9]+)$", r['name'])
                 if len(m):
                     idx = int(m[0])
                     pfx = r['name'][:-len(m[0])]
                     if pfx == star_prefix:
-                        self.known_boxel_idxs.add(int(m[0]))
+                        self.known_boxel_idxs.add(idx)
 
             if self.frame:
                 self.frame.event_generate("<<Refresh-Boxel-Stats>>")
@@ -95,11 +121,13 @@ class EDMCBoxelSurveyor:
         def with_failure(result: requests.Response):
             logger.warning(f"Couldn't get boxel stats from EDSM (status {result.status_code})")
             self.known_boxel_idxs.clear()
+            self.known_boxel_idxs.update(cached_results)
             self.frame.event_generate("<<Refresh-Boxel-Stats>>")
 
         def with_exception(e: BaseException):
             logger.warning(f"Couldn't get boxel stats from EDSM (exception thrown)", exc_info=e)
             self.known_boxel_idxs.clear()
+            self.known_boxel_idxs.update(cached_results)
             self.frame.event_generate("<<Refresh-Boxel-Stats>>")
 
         threading.Thread(target=get_boxel_stats_edsm_thread, args=[prefix, with_results]).start()
@@ -223,9 +251,26 @@ class EDMCBoxelSurveyor:
         frame2.grid(row=1, sticky=tk.W)
         frame3.grid(row=2)
 
-        self.frame.bind("<<Refresh-Boxel-Stats>>", lambda e: self.update_ui(self.last_state))
+        self.frame.bind("<<Refresh-Boxel-Stats>>", self.on_refresh_boxel_stats)
 
         return self.frame
+
+    def on_refresh_boxel_stats(self, _):
+        if self.last_state and "SystemAddress" in self.last_state and self.last_state["SystemAddress"] and len(self.known_boxel_idxs):
+            parsed_id64 = boxel.parse_id64(self.last_state["SystemAddress"])
+            try:
+                self.db_cur.execute("""
+                INSERT OR REPLACE INTO boxels (Sx, Sy, Sz, MC, Bx, By, Bz, n_known) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                                    """, (
+                                        parsed_id64["SectorX"], parsed_id64["SectorY"], parsed_id64["SectorZ"],
+                                        parsed_id64["MassCode"], parsed_id64["BoxelX"], parsed_id64["BoxelY"],
+                                        parsed_id64["BoxelZ"], " ".join(str(n) for n in self.known_boxel_idxs)
+                                    ))
+                self.db_conn.commit()
+            except Exception as e:
+                logger.error("couldn't update boxel stats!", exc_info=e)
+
+        self.update_ui(self.last_state)
 
     def update_ui(self, state):
         if state:
@@ -270,7 +315,7 @@ class EDMCBoxelSurveyor:
                 self.current_h, self.current_max_h = boxel.currentBoxelInLayer(parsed_id64)
 
                 self.update_ui(state)
-                self.get_boxel_stats(state["SystemName"])
+                self.get_boxel_stats(state["SystemName"], state["SystemAddress"])
 
 plugin = EDMCBoxelSurveyor()
 
