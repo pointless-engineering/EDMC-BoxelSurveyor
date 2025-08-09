@@ -1,5 +1,4 @@
-import hilbertcurve
-import hilbertcurve.hilbertcurve
+import thirdparty.hilbertcurve.hilbertcurve as hilbertcurve
 
 import csv
 import pathlib
@@ -85,7 +84,7 @@ def nextInBoxel(id64: int, knownIdxs: typing.Set[int] = set()):
     return parsedToName(parsed_id64)
 
 def currentBoxelInLayer(parsed_id64: dict):
-    hc = hilbertcurve.hilbertcurve.HilbertCurve(n = 3, p = 7 - parsed_id64["MassCode"])
+    hc = hilbertcurve.HilbertCurve(n = 3, p = 7 - parsed_id64["MassCode"])
     boxelCoord = (parsed_id64["BoxelX"], parsed_id64["BoxelY"], parsed_id64["BoxelZ"])
 
     h = hc.distance_from_point(boxelCoord)
@@ -97,7 +96,7 @@ def nextBoxelInLayer(id64: int, offset: int = 1):
     if parsed_id64["MassCode"] == 7:
         return None
 
-    hc = hilbertcurve.hilbertcurve.HilbertCurve(n = 3, p = 7 - parsed_id64["MassCode"])
+    hc = hilbertcurve.HilbertCurve(n = 3, p = 7 - parsed_id64["MassCode"])
     boxelCoord = (parsed_id64["BoxelX"], parsed_id64["BoxelY"], parsed_id64["BoxelZ"])
 
     h = hc.distance_from_point(boxelCoord)

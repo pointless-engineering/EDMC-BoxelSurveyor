@@ -11,7 +11,7 @@ from config import appname, config
 
 from utils import boxel
 
-import pyperclip
+from thirdparty import pyperclip
 
 import typing
 
@@ -23,9 +23,10 @@ import sqlite3
 
 # This **MUST** match the name of the folder the plugin is in.
 PLUGIN_NAME = "EDMCBoxelSurveyor"
-PLUGIN_VERSION = boxel.suffix({"MassCode":0,"BoxelZ":1,"BoxelY":1,"BoxelX":0,"Index":0})
+PLUGIN_VERSION = boxel.suffix({"MassCode":0,"BoxelZ":1,"BoxelY":2,"BoxelX":0,"Index":0})
 
 logger = logging.getLogger(f"{appname}.{PLUGIN_NAME}")
+logger.setLevel(logging.INFO)
 
 db_path = config.app_dir_path / "boxelsurveyor.db3"
 
@@ -275,10 +276,10 @@ class EDMCBoxelSurveyor:
     def update_ui(self, state):
         if state:
             if self.skip_known.get():
-                logger.info("skipping known")
+                logger.debug("skipping known")
                 nextStar = boxel.nextInBoxel(state["SystemAddress"], self.known_boxel_idxs)
             else:
-                logger.info("not skipping known")
+                logger.debug("not skipping known")
                 nextStar = boxel.nextInBoxel(state["SystemAddress"], set())
             nextBoxel = boxel.nextBoxelInLayer(state["SystemAddress"], self.current_offset)
             self.label.configure(text=f'Next Star:')

@@ -16,10 +16,6 @@ This plugin lets you do two things:
 
 * You need [EDMC](https://github.com/EDCD/EDMarketConnector).
 * Clone this repository, or extract a release, to your EDMC plugins directory.
-* With the same Python you use to launch EDMC:
-```
-pip install -r requirements.txt
-```
 * Launch EDMC. The plugin should now be ready to use.
 
 ## Usage
@@ -53,7 +49,10 @@ pip install -r requirements.txt
     `utils/sector-list.csv` with a [newer one](https://edastro.b-cdn.net/mapcharts/files/sector-list.csv).
   * Or, you are outside the perimeter of Stellar Forge generation (so the 
     sector name is unknowable because the true generation rules of sector names 
-    are unknown). Use the Galaxy Map to find stars to explore.
+    were unknown). Use the Galaxy Map to find stars to explore.
+  * There _is_ [prior work](https://bitbucket.org/Esvandiary/edts/src/develop/edtslib/pgnames.py)
+    on sector name generation, but the algorithm is moderately _involved_ and I
+    don't feel like integrating it
 * The unknown star you sent me to is already explored
   * By an explorer not uploading data to EDSM or EDDN. Not all players run tools
     in the background while playing E:D; tools like this only know about systems
@@ -63,4 +62,12 @@ pip install -r requirements.txt
 
 ## License
 
-This code is in the public domain.
+This code is in the public domain (except as noted below).
+
+This code redistributes the following third-party packages under their
+respective licenses:
+
+* [hilbertcurve](https://github.com/galtay/hilbertcurve) 2.0.5 (modified),
+  MIT License (`thirdparty/hilbertcurve/LICENSE`)
+* [pyperclip](https://github.com/asweigart/pyperclip)@e16fa9c, 3-clause BSD
+  (`thirdparty/pyperclip/LICENSE.txt`)
