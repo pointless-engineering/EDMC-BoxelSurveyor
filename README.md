@@ -69,5 +69,3 @@ respective licenses:
 
 * [hilbertcurve](https://github.com/galtay/hilbertcurve) 2.0.5 (modified),
   MIT License (`thirdparty/hilbertcurve/LICENSE`)
-* [pyperclip](https://github.com/asweigart/pyperclip)@e16fa9c, 3-clause BSD
-  (`thirdparty/pyperclip/LICENSE.txt`)
