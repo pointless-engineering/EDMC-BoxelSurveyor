@@ -11,8 +11,6 @@ from config import appname, config
 
 from utils import boxel
 
-from thirdparty import pyperclip
-
 import typing
 
 import threading
@@ -23,7 +21,7 @@ import sqlite3
 
 # This **MUST** match the name of the folder the plugin is in.
 PLUGIN_NAME = "EDMCBoxelSurveyor"
-PLUGIN_VERSION = boxel.suffix({"MassCode":0,"BoxelZ":1,"BoxelY":2,"BoxelX":0,"Index":0})
+PLUGIN_VERSION = boxel.suffix({"MassCode":0,"BoxelZ":1,"BoxelY":3,"BoxelX":0,"Index":0})
 
 logger = logging.getLogger(f"{appname}.{PLUGIN_NAME}")
 logger.setLevel(logging.INFO)
@@ -131,7 +129,7 @@ class EDMCBoxelSurveyor:
             self.known_boxel_idxs.update(cached_results)
             self.frame.event_generate("<<Refresh-Boxel-Stats>>")
 
-        threading.Thread(target=get_boxel_stats_edsm_thread, args=[prefix, with_results]).start()
+        threading.Thread(target=get_boxel_stats_edsm_thread, args=[prefix, with_results, with_failure, with_exception]).start()
 
     def offset_inc(self):
         if self.last_state:
@@ -194,6 +192,10 @@ class EDMCBoxelSurveyor:
         config.set('boxelsurveyor_skipknown', self.skip_known.get())
         self.update_ui(self.last_state)
 
+    def do_copy(self, text):
+        self.frame.clipboard_clear()
+        self.frame.clipboard_append(text)
+
     def setup_main_ui(self, parent: tk.Frame) -> tk.Frame:
         """
         Create our entry on the main EDMC UI.
@@ -222,7 +224,7 @@ class EDMCBoxelSurveyor:
 
         self.button1 = tk.Button(frame2, text="Awaiting Data", state="disabled")
         self.button1.grid(row=current_row, column=1)
-        self.button1.bind("<Button-1>", lambda e: pyperclip.copy(self.button1['text']) if self.last_state else None)
+        self.button1.bind("<Button-1>", lambda e: self.do_copy(self.button1['text']) if self.last_state else None)
 
         current_row += 1
 
@@ -231,7 +233,7 @@ class EDMCBoxelSurveyor:
 
         self.button2 = tk.Button(frame2, text="Awaiting Data", state="disabled")
         self.button2.grid(row=current_row, column=1)
-        self.button2.bind("<Button-1>", lambda e: pyperclip.copy(self.button2['text']) if self.last_state else None)
+        self.button2.bind("<Button-1>", lambda e: self.do_copy(self.button2['text']) if self.last_state else None)
 
         current_row += 1
 
